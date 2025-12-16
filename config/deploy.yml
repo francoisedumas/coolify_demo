@@ -2,16 +2,33 @@
 service: coolify_demo
 
 # Name of the container image (use your-user/app-name on external registries).
-image: coolify_demo
+image: dumaslattaquefrancois/coolify_demo
 
 # Deploy to these servers.
 servers:
   web:
-    - 192.168.0.1
+    hosts:
+      - 151.80.144.80
+    proxy: false
+    options:
+      network: "coolify"
   # job:
   #   hosts:
   #     - 192.168.0.1
   #   cmd: bin/jobs
+
+labels:
+  traefik.enable: "true"
+  traefik.docker.network: "coolify"
+  traefik.http.routers.store-https.rule: "Host(`unnombidon.fr`)" # TODO: change to your domain
+  traefik.http.routers.store-https.entrypoints: "https"
+  traefik.http.routers.store-https.tls: "true"
+  traefik.http.routers.store-https.tls.certresolver: "letsencrypt"
+  traefik.http.routers.store-https.service: "unnombidon" # TODO: change
+  traefik.http.services.store.loadbalancer.server.port: "3000"
+  traefik.http.routers.store-http.rule: "Host(`unnombidon.fr`)" # TODO: change
+  traefik.http.routers.store-http.entrypoints: "http"
+  traefik.http.routers.store-http.middlewares: "redirect-to-https"
 
 # Enable SSL auto certification via Let's Encrypt and allow for multiple apps on a single web server.
 # If used with Cloudflare, set encryption mode in SSL/TLS setting to "Full" to enable CF-to-app encryption.
@@ -27,14 +44,14 @@ servers:
 # Where you keep your container images.
 registry:
   # Alternatives: hub.docker.com / registry.digitalocean.com / ghcr.io / ...
-  server: localhost:5555
+  # server: localhost:5555
 
   # Needed for authenticated registries.
-  # username: your-user
+  username: dumaslattaquefrancois
 
   # Always use an access token rather than real password when possible.
-  # password:
-  #   - KAMAL_REGISTRY_PASSWORD
+  password:
+    - KAMAL_REGISTRY_PASSWORD
 
 # Inject ENV variables into containers (secrets come from .kamal/secrets).
 env:
@@ -92,8 +109,8 @@ builder:
   #   - RAILS_MASTER_KEY
 
 # Use a different ssh user than root
-# ssh:
-#   user: app
+ssh:
+  user: francois
 
 # Use accessory services (secrets come from .kamal/secrets).
 # accessories:
