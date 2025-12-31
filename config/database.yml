@@ -85,5 +85,7 @@ test:
 # for a full overview on how database connection configuration can be specified.
 #
 production:
-  <<: *default
-  database: coolify_demo_production
+  primary: &primary_production
+    <<: *default
+    database: the_life_planner_production
+    url: <%= Rails.application.credentials.db_url %>
