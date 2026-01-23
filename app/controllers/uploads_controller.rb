@@ -1,27 +1,41 @@
 class UploadsController < ApplicationController
   http_basic_authenticate_with name: Rails.application.credentials.upload_username,
-                                password: Rails.application.credentials.upload_password
+                                password: Rails.application.credentials.upload_password,
+                                except: [:result]
+
+  # Disable CSRF for the result endpoint (called by N8N)
+  skip_before_action :verify_authenticity_token, only: [:result]
 
   def new
     # Renders the upload form
   end
 
-def create
+  def create
     if params[:pdf_file].present?
-      # Send to N8N webhook
-      response = send_to_n8n(params[:pdf_file])
+      # Store filename in session to display on processing page
+      session[:processing_filename] = params[:pdf_file].original_filename
 
-      if response.is_a?(Net::HTTPSuccess)
-        flash[:notice] = "File uploaded successfully!"
-        redirect_to root_path
-      else
-        flash[:alert] = "Upload failed (HTTP #{response.code}): #{response.body}"
-        render :new
+      # Send to N8N webhook (fire and forget)
+      Thread.new do
+        send_to_n8n(params[:pdf_file])
       end
+
+      # Redirect to processing page
+      redirect_to uploads_processing_path
     else
       flash[:alert] = "Please select a PDF file"
       render :new
     end
+  end
+
+  def processing
+    @filename = session[:processing_filename] || "your file"
+  end
+
+  def result
+    # This endpoint receives the OCR result from N8N
+    @ocr_data = params[:ocr_result] || params
+    render :result
   end
 
   private
@@ -33,15 +47,20 @@ def create
     uri = URI.parse(Rails.application.credentials.n8n_webhook_url)
 
     request = Net::HTTP::Post.new(uri)
-    form_data = [['pdf_file', file.read, { filename: file.original_filename, content_type: 'application/pdf' }]]
+
+    # Add callback URL so N8N knows where to send results
+    callback_url = "#{request_base_url}/uploads/result"
+
+    form_data = [
+      ['pdf_file', file.read, { filename: file.original_filename, content_type: 'application/pdf' }],
+      ['callback_url', callback_url]
+    ]
     request.set_form form_data, 'multipart/form-data'
 
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = (uri.scheme == 'https')
 
     if http.use_ssl?
-      # In development, skip SSL verification for convenience
-      # In production, verify certificates properly
       if Rails.env.development?
         http.verify_mode = OpenSSL::SSL::VERIFY_NONE
       else
@@ -51,7 +70,6 @@ def create
 
     response = http.request(request)
 
-    # Log the response for debugging
     Rails.logger.info "N8N Response Code: #{response.code}"
     Rails.logger.info "N8N Response Body: #{response.body}"
 
@@ -59,6 +77,9 @@ def create
   rescue StandardError => e
     Rails.logger.error "Error sending to N8N: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
-    raise
+  end
+
+  def request_base_url
+    "#{request.protocol}#{request.host_with_port}"
   end
 end

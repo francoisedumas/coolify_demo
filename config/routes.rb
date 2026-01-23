@@ -8,6 +8,8 @@ Rails.application.routes.draw do
   root to: "pages#home"
   get "upload", to: "uploads#new"
   post "uploads", to: "uploads#create"
+  get "uploads/processing", to: "uploads#processing"
+  post "uploads/result", to: "uploads#result"
 
   # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
