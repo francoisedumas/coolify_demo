@@ -12,15 +12,11 @@ class UploadsController < ApplicationController
 
   def create
     if params[:pdf_file].present?
-      # Store filename in session to display on processing page
       session[:processing_filename] = params[:pdf_file].original_filename
 
-      # Send to N8N webhook (fire and forget)
-      Thread.new do
-        send_to_n8n(params[:pdf_file])
-      end
+      # Fire-and-forget HTTP request (safe)
+      send_to_n8n(params[:pdf_file])
 
-      # Redirect to processing page
       redirect_to uploads_processing_path
     else
       flash[:alert] = "Please select a PDF file"
@@ -33,10 +29,19 @@ class UploadsController < ApplicationController
   end
 
   def result
-    # This endpoint receives the OCR result from N8N
+    p "*"*100
+    p "*"*100
+    p "*"*100
     @ocr_data = params[:ocr_result] || params
-    render :result
+
+    Turbo::StreamsChannel.broadcast_replace_to(
+      'ocr_channel',
+      target: 'ocr_result_content',
+      partial: 'uploads/ocr_result',
+      locals: {ocr_data: @ocr_data}
+    )
   end
+
 
   private
 
