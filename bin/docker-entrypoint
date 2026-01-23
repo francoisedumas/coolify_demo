@@ -3,6 +3,7 @@
 echo "=== DEBUG: Environment Variables ==="
 echo "DATABASE_URL: ${DATABASE_URL}"
 echo "RAILS_ENV: ${RAILS_ENV}"
+echo "RAILS_ENV: ${N8N_WEBHOOK_URL}"
 echo "===================================="
 
 # If running the rails server then create or migrate existing database

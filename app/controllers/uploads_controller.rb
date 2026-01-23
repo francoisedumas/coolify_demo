@@ -1,6 +1,6 @@
 class UploadsController < ApplicationController
-  http_basic_authenticate_with name: Rails.application.credentials.upload_username,
-                                password: Rails.application.credentials.upload_lemot,
+  http_basic_authenticate_with name: Rails.application.credentials.upload_username || ENV["UPLOAD_USERNAME"],
+                                password: Rails.application.credentials.upload_lemot || ENV["UPLOAD_LEMOT"],
                                 except: [:result]
 
   # Disable CSRF for the result endpoint (called by N8N)
@@ -44,7 +44,8 @@ class UploadsController < ApplicationController
     require 'net/http'
     require 'uri'
 
-    uri = URI.parse(Rails.application.credentials.n8n_webhook_url)
+    n8n_webhook_url = Rails.application.credentials.n8n_webhook_url || ENV["N8N_WEBHOOK_URL"]
+    uri = URI.parse(n8n_webhook_url)
 
     request = Net::HTTP::Post.new(uri)
 
