@@ -1,6 +1,6 @@
 class UploadsController < ApplicationController
   http_basic_authenticate_with name: Rails.application.credentials.upload_username,
-                                password: Rails.application.credentials.upload_password,
+                                password: Rails.application.credentials.upload_lemot,
                                 except: [:result]
 
   # Disable CSRF for the result endpoint (called by N8N)
